@@ -121,3 +121,9 @@ a.descargar:hover {
 .swal2-container {
     z-index: 9999 !important;
 }
+
+@media (max-width: 600px){
+    form{
+        width: 90%;
+    }
+}
