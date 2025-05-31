@@ -1,0 +1,137 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    color: #333;
+    height: 100vh;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e0e0e0;
+    font-family: "Montserrat", sans-serif;
+}
+
+main {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+form {
+    width: 550px;
+    gap: 1rem;
+    padding: 2.5rem;
+    border-radius: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(145deg, #cacaca, #f0f0f0);
+    box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+}
+
+.drop-zone {
+    width: 100%;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.drop-zone label {
+    display: flex;
+    padding: 2rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px dashed #bbb;
+    border-radius: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.drop-zone.dragover label {
+    background: rgba(33, 150, 243, 0.1);
+    border-color: #2196f3;
+    color: #2196f3;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.botones {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+button {
+    flex: 1;
+    padding: 1rem 0;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-transform: capitalize;
+}
+
+button.primary {
+    background-color: #2196f3;
+}
+
+button.danger {
+    background-color: #f44336;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+#resultado {
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    color: #333;
+}
+
+a.descargar {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: #2196f3;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+a.descargar:hover {
+    text-decoration: underline;
+}
+
+.swal2-container {
+    z-index: 9999 !important;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

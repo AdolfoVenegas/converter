@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Convert Image to WebP</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <main role="main">
+        <form id="formulario" enctype="multipart/form-data" method="POST" action="/convert">
+            <div class="drop-zone" id="drop-zone">
+                <label>Drop your images here or click to select</label>
+                <input id="fotito" type="file" name="image" accept="image/*" multiple hidden />
+            </div>
+
+
+            <div class="botones">
+                <button type="submit" class="primary">
+                    <span id="spinner">🔄</span> Convert
+                </button>
+                <button type="button" id="btn-clear" class="danger">🗑️ Delete Data</button>
+            </div>
+        </form>
+
+        <div id="resultado" class="resultado" aria-live="polite"></div>
+    </main>
+
+</body>
+<script src="app.js"></script>
+<script>
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const spinner = document.getElementById("spinner");
+        spinner.classList.add("spin");
+
+        if (!fileInput.files.length) {
+            spinner.classList.remove("spin");
+            Swal.fire({
+                icon: "warning",
+                title: "No files selected",
+                text: "Please upload at least one image before converting.",
+            });
+            return;
+        }
+
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch("/convert", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error("Conversion failed");
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            resultado.innerHTML = `
+      <p>Download ZIP with converted images:</p>
+      <a href="${url}" download="converted_images.zip" class="descargar">📦 Download ZIP</a>
+    `;
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "There was a problem converting the images.",
+            });
+        } finally {
+            spinner.classList.remove("spin");
+        }
+    });
+</script>
+
+</html>
