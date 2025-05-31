@@ -1,113 +1,126 @@
-const form = document.getElementById("formulario");
-const resultado = document.getElementById("resultado");
-const dropZone = document.getElementById("drop-zone");
-const fileInput = document.getElementById("fotito");
-const btnClear = document.getElementById("btn-clear");
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("formulario");
+  const resultado = document.getElementById("resultado");
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("fotito");
+  const btnClear = document.getElementById("btn-clear");
+  const spinner = document.getElementById("spinner");
 
-// ⚠️ Validación de archivos antes de enviar
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  // 🔹 Click para seleccionar archivos
+  dropZone.addEventListener("click", () => fileInput.click());
 
-  if (!fileInput.files.length) {
-    Swal.fire({
-      icon: "warning",
-      title: "No files selected",
-      text: "Please upload at least one image before converting.",
-    });
-    return;
-  }
-
-  const formData = new FormData(form);
-
-  try {
-    const res = await fetch("/convert", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) throw new Error("Conversion failed");
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    resultado.innerHTML = `
-      <p>Download ZIP with converted images:</p>
-      <a href="${url}" download="converted_images.zip" class="descargar">📦 Download ZIP</a>
-    `;
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "There was a problem converting the images.",
-    });
-  }
-});
-
-// 🔴 SweetAlert2 para eliminar archivos
-btnClear.addEventListener("click", async (e) => {
-  e.preventDefault();
-
-  const result = await Swal.fire({
-    title: "Are you sure?",
-    text: "This will delete all files from 'uploads' and 'outputs'.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#d33",
-    cancelButtonColor: "#3085d6",
-    confirmButtonText: "Delete",
-    cancelButtonText: "Cancel",
+  // 🔹 Arrastrar archivos sobre la zona
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("highlight");
   });
 
-  if (!result.isConfirmed) return;
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("highlight");
+  });
 
-  try {
-    const res = await fetch("/clear-data", { method: "POST" });
-    const data = await res.json();
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("highlight");
+    fileInput.files = e.dataTransfer.files;
+    updateDropZoneText(fileInput.files);
+  });
 
-    Swal.fire({
-      title: data.deleted > 0 ? "Deleted!" : "Nothing to delete",
-      text: data.message,
-      icon: data.deleted > 0 ? "success" : "info",
-    });
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      title: "Error",
-      text: "The data could not be deleted.",
-      icon: "error",
-    });
+  // 🔹 Mostrar cuántos archivos se han seleccionado
+  fileInput.addEventListener("change", () => {
+    updateDropZoneText(fileInput.files);
+  });
+
+  function updateDropZoneText(files) {
+    const label = dropZone.querySelector("label");
+    if (files.length === 0) {
+      label.textContent = "Drop your images here or click to select";
+    } else {
+      label.textContent = `📂 ${files.length} file(s) ready`;
+    }
   }
+
+  // 🔹 Enviar imágenes al servidor
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!fileInput.files.length) {
+      Swal.fire({
+        icon: "warning",
+        title: "No files selected",
+        text: "Please upload at least one image before converting.",
+      });
+      return;
+    }
+
+    spinner.classList.add("spin");
+
+    const formData = new FormData();
+    for (const file of fileInput.files) {
+      formData.append("image", file);
+    }
+
+    try {
+      const res = await fetch("/convert", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Conversion failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      resultado.innerHTML = `
+        <p>Download ZIP with converted images:</p>
+        <a href="${url}" download="converted_images.zip" class="descargar">
+          <i class="material-icons">inventory_2</i>
+          <span>Download ZIP</span>
+        </a>
+      `;
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "There was a problem converting the images.",
+      });
+    } finally {
+      spinner.classList.remove("spin");
+    }
+  });
+
+  // 🔹 Borrar archivos del servidor
+  btnClear.addEventListener("click", async () => {
+    const confirmed = await Swal.fire({
+      icon: "question",
+      title: "Clear uploaded files?",
+      text: "This will delete temporary files from the server.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, clear",
+    });
+
+    if (!confirmed.isConfirmed) return;
+
+    try {
+      const res = await fetch("/clear-data", { method: "POST" });
+      const data = await res.json();
+
+      Swal.fire({
+        icon: "info",
+        title: "Cleanup complete",
+        text: data.message,
+      });
+
+      resultado.innerHTML = "";
+      fileInput.value = "";
+      updateDropZoneText([]);
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Could not clear server files.",
+      });
+    }
+  });
 });
-
-// 🟢 Manejadores para Dropzone
-dropZone.addEventListener("click", () => fileInput.click());
-
-dropZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  dropZone.classList.add("dragover");
-});
-
-dropZone.addEventListener("dragleave", () => {
-  dropZone.classList.remove("dragover");
-});
-
-dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  dropZone.classList.remove("dragover");
-  fileInput.files = e.dataTransfer.files;
-  updateDropLabel();
-});
-
-// 🟡 Manejador para selección manual de archivos
-fileInput.addEventListener("change", updateDropLabel);
-
-// 🔄 Actualiza el texto del dropzone
-function updateDropLabel() {
-  const label = dropZone.querySelector("label");
-  if (fileInput.files.length > 0) {
-    label.textContent = `📂 ${fileInput.files.length} file(s) ready`;
-  } else {
-    label.textContent = "Drop your images here or click to select";
-  }
-}
