@@ -12,34 +12,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="shortcut icon" href="./logo.png" type="image/png">
-
 </head>
 
 <body>
     <main role="main">
         <form id="formulario" enctype="multipart/form-data" method="POST" action="/convert">
             <div class="drop-zone" id="drop-zone">
-                <label>Drop your images here or click to select</label>
+                <label id="drop-label">Drop your images here or click to select</label>
                 <input id="fotito" type="file" name="image" accept="image/*" multiple hidden />
             </div>
 
-
             <div class="botones">
-                <button type="submit" class="primary">
-                    <span id="spinner">
+                <button type="submit" class="primary" id="convert-btn">
+                    <span id="spinner" aria-hidden="true">
                         <i class="material-icons">refresh</i>
-                    </span> Convert
+                    </span>
+                    <span class="btn-text">Convert</span>
                 </button>
                 <button type="button" id="btn-clear" class="danger">
                     <i class="material-icons">delete</i>
-                    Delete Data</button>
+                    <span class="btn-text">Delete Data</span>
+                </button>
             </div>
         </form>
-
         <div id="resultado" class="resultado" aria-live="polite"></div>
-    </main>
+        <div id="acciones-secundarias" style="display: none; margin-top: 1rem;">
+            <button id="btn-reset" class="primary">
+                <i class="material-icons">restart_alt</i>
+                Convert More Images
+            </button>
+        </div>
 
+    </main>
 </body>
+
 <script src="app.js"></script>
 
 </html>

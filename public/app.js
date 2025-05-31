@@ -5,11 +5,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fotito");
   const btnClear = document.getElementById("btn-clear");
   const spinner = document.getElementById("spinner");
+  const btnReset = document.getElementById("btn-reset");
+  const contenedorAcciones = document.getElementById("acciones-secundarias");
 
-  // 🔹 Click para seleccionar archivos
+  // Dropzone: click para abrir selector
   dropZone.addEventListener("click", () => fileInput.click());
 
-  // 🔹 Arrastrar archivos sobre la zona
+  // Dropzone: arrastrar archivos
   dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
     dropZone.classList.add("highlight");
@@ -26,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateDropZoneText(fileInput.files);
   });
 
-  // 🔹 Mostrar cuántos archivos se han seleccionado
+  // Al seleccionar archivos manualmente
   fileInput.addEventListener("change", () => {
     updateDropZoneText(fileInput.files);
   });
@@ -40,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 🔹 Enviar imágenes al servidor
+  // Envío del formulario
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -70,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+
       resultado.innerHTML = `
         <p>Download ZIP with converted images:</p>
         <a href="${url}" download="converted_images.zip" class="descargar">
@@ -77,6 +80,14 @@ document.addEventListener("DOMContentLoaded", () => {
           <span>Download ZIP</span>
         </a>
       `;
+
+      Swal.fire({
+        icon: "success",
+        title: "Conversion complete!",
+        text: "Your images were converted successfully. You can download them below.",
+      });
+
+      contenedorAcciones.style.display = "flex";
     } catch (err) {
       console.error(err);
       Swal.fire({
@@ -86,10 +97,21 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } finally {
       spinner.classList.remove("spin");
+      fileInput.value = "";
+      form.reset();
+      updateDropZoneText([]);
     }
   });
 
-  // 🔹 Borrar archivos del servidor
+  // Botón para reiniciar el formulario
+  btnReset.addEventListener("click", () => {
+    resultado.innerHTML = "";
+    form.reset();
+    updateDropZoneText([]);
+    contenedorAcciones.style.display = "none";
+  });
+
+  // Eliminar archivos del servidor
   btnClear.addEventListener("click", async () => {
     const confirmed = await Swal.fire({
       icon: "question",
@@ -112,8 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       resultado.innerHTML = "";
-      fileInput.value = "";
+      form.reset();
       updateDropZoneText([]);
+      contenedorAcciones.style.display = "none";
     } catch (err) {
       console.error(err);
       Swal.fire({

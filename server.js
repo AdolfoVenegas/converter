@@ -14,35 +14,25 @@ fs.mkdirSync(outputsDir, { recursive: true });
 
 const cleanDir = async (dir) => {
   try {
-    await fsPromises.rm(dir, { recursive: true, force: true });
-    await fsPromises.mkdir(dir, { recursive: true });
-    console.log(`✅ Cleaned folder ${dir}`);
-  } catch (err) {
-    console.warn(`⚠️ Failed to remove ${dir}, trying file-by-file:`, err.code);
-    try {
-      const files = await fsPromises.readdir(dir);
-      for (const file of files) {
-        const filePath = path.join(dir, file);
-        try {
-          await fsPromises.unlink(filePath);
-          console.log(`🗑️ Deleted ${file}`);
-        } catch (fileErr) {
-          console.error(`❌ Could not delete ${filePath}:`, fileErr.code);
-        }
+    const files = await fsPromises.readdir(dir);
+    for (const file of files) {
+      const filePath = path.join(dir, file);
+      try {
+        await fsPromises.unlink(filePath);
+        console.log(`🗑️ Deleted ${file}`);
+      } catch (err) {
+        console.error(`❌ Cannot delete ${filePath}: ${err.message}`);
       }
-      await fsPromises.mkdir(dir, { recursive: true });
-      console.log(`✅ Folder ${dir} cleaned manually.`);
-    } catch (finalErr) {
-      console.error(`❌ Final failure cleaning ${dir}:`, finalErr);
     }
+  } catch (err) {
+    console.error(`❌ Cannot read directory ${dir}: ${err.message}`);
   }
 };
 
 const server = http.createServer((req, res) => {
-  // Archivos estáticos
   if (
     req.method === "GET" &&
-    req.url.match(/\.(css|js|png|jpg|jpeg|webp|svg)$/)
+    req.url.match(/\.(css|js|png|jpg|jpeg|webp|svg|ico)$/)
   ) {
     const filePath = path.join(__dirname, "public", req.url);
     const ext = path.extname(filePath).slice(1);
@@ -54,6 +44,7 @@ const server = http.createServer((req, res) => {
       jpeg: "image/jpeg",
       webp: "image/webp",
       svg: "image/svg+xml",
+      ico: "image/x-icon",
     };
 
     fs.readFile(filePath, (err, content) => {
@@ -69,7 +60,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Página principal
   if (req.method === "GET" && req.url === "/") {
     const filePath = path.join(__dirname, "public", "index.html");
     fs.createReadStream(filePath)
@@ -81,16 +71,14 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Conversión de imágenes
   if (req.method === "POST" && req.url === "/convert") {
     const form = new IncomingForm({
       uploadDir: uploadsDir,
       keepExtensions: true,
       multiples: true,
       maxFiles: 100,
-      filename: (name, ext, part, form) => {
-        return path.basename(part.originalFilename).replace(/\s+/g, "_");
-      },
+      filename: (name, ext, part) =>
+        path.basename(part.originalFilename).replace(/\s+/g, "_"),
     });
 
     form.parse(req, async (err, fields, files) => {
@@ -115,57 +103,55 @@ const server = http.createServer((req, res) => {
           const outputFileName = `${originalName}.webp`;
           const outputFilePath = path.join(outputsDir, outputFileName);
 
-          const metadata = await sharp(inputPath).metadata();
-          if (!metadata.format)
-            throw new Error(`Invalid file: ${file.originalFilename}`);
-
-          await sharp(inputPath).webp({ quality: 80 }).toFile(outputFilePath);
-          archive.file(outputFilePath, { name: outputFileName });
-
-          // 🔒 Forzar cierre del archivo en Windows
           try {
-            await new Promise((resolve, reject) => {
-              const s = fs.createReadStream(inputPath);
-              s.on("open", () => s.close(resolve));
-              s.on("error", reject);
-            });
-          } catch (closeErr) {
-            console.warn(`⚠️ Failed to force-close ${inputPath}:`, closeErr);
+            await sharp(inputPath).webp({ quality: 80 }).toFile(outputFilePath);
+            archive.file(outputFilePath, { name: outputFileName });
+          } catch (err) {
+            console.error(
+              `❌ Failed to convert ${file.originalFilename}: ${err.message}`
+            );
+          }
+
+          try {
+            await fsPromises.unlink(inputPath);
+          } catch (err) {
+            console.warn(`⚠️ Could not remove temp upload: ${inputPath}`);
           }
         }
 
         archive.finalize();
 
-        outputZip.on("close", () => {
+        outputZip.on("close", async () => {
           res.writeHead(200, {
             "Content-Type": "application/zip",
             "Content-Disposition":
               'attachment; filename="converted_images.zip"',
           });
 
-          const zipStream = fs.createReadStream(zipPath);
-          zipStream.pipe(res);
+          const stream = fs.createReadStream(zipPath);
+          stream.pipe(res);
 
-          zipStream.on("end", async () => {
-            zipStream.destroy();
+          stream.on("close", async () => {
             await cleanDir(uploadsDir);
             await cleanDir(outputsDir);
-            console.log("🧹 Temporary folders cleaned after download.");
+            console.log("🧹 Uploads and outputs cleaned.");
           });
         });
 
         archive.on("error", (err) => {
-          throw err;
+          console.error("❌ Archiver error:", err.message);
+          res.writeHead(500);
+          res.end("Error creating archive.");
         });
       } catch (e) {
+        console.error("❌ Unexpected error:", e.message);
         res.writeHead(500);
-        res.end("Internal error converting images.");
+        res.end("Internal error.");
       }
     });
     return;
   }
 
-  // Limpieza manual
   if (req.method === "POST" && req.url === "/clear-data") {
     (async () => {
       await cleanDir(uploadsDir);
@@ -174,17 +160,16 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          deleted: 1,
-          message: "✅ Uploads and outputs were deleted and recreated.",
+          deleted: true,
+          message: "🧼 Uploads and outputs cleaned.",
         })
       );
     })();
     return;
   }
 
-  // Ruta no encontrada
   res.writeHead(404);
-  res.end("Route not found");
+  res.end("Route not found.");
 });
 
 server.listen(3000, () => {
